@@ -1,4 +1,6 @@
-const url = `https://api.helius.xyz/v0/webhooks/c03e9676-eb90-49c8-912c-7667dd222c15?api-key=216aa485-33ec-4ac3-a683-7813780e07e9`
+import * as dotenv from 'dotenv';
+dotenv.config();
+const url = process.env.HELIUS_API_URL
 
 interface ApiResponse {
     jsonrpc: string;

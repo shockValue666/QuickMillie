@@ -2,6 +2,8 @@
     import { Keypair, Transaction, Connection, PublicKey, SystemProgram, LAMPORTS_PER_SOL, sendAndConfirmRawTransaction, sendAndConfirmTransaction } from "@solana/web3.js";
     import { createTransferCheckedInstruction, getAssociatedTokenAddress } from "@solana/spl-token";
     import * as bs58 from "bs58";
+    import * as dotenv from 'dotenv';
+    dotenv.config();
 
     export const transfer = async () => {
         const connection = new Connection(process.env.HELIUS_API_URL || "");
