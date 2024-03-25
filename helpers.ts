@@ -51,13 +51,13 @@ export const updateBalance = async (requestBody:any,transactionType:{status:stri
         const to = requestBody[0].nativeTransfers[0].toUserAccount
         const addressOwner = await supabase.from("profiles").select("*").eq('address',to)
         if(addressOwner.data){
-            const currentBlance = parseFloat(addressOwner.data[0].balance)
+            const currentBlance = parseFloat(addressOwner.data[0].balance) || 0;
             const amount = requestBody[0].nativeTransfers[0].amount/1000000000
             const newBalance = currentBlance+amount
             console.log("current balance: ",currentBlance,"amount: ",amount , " new balance: ",newBalance)
             const res = await supabase.from("profiles").update({balance:newBalance}).eq('address',to).select("*")
             if(res.data){
-                console.log("balance updated:",res.data)
+                // console.log("balance updated:",res.data)
                 return {status:"success"}
             }else{
                 console.log("error updating balance")
@@ -78,7 +78,7 @@ export const updateBalance = async (requestBody:any,transactionType:{status:stri
             console.log("current balance: ",currentBlance,"amount: ",amount , " new balance: ",newBalance)
             const res = await supabase.from("profiles").update({balance:newBalance}).eq('address',from).select("*")
             if(res.data){
-                console.log("balance updated:",res.data)
+                // console.log("balance updated:",res.data)
                 return {status:"success"}
             }else{
                 console.log("error updating balance")
@@ -105,7 +105,7 @@ export const updateBalance = async (requestBody:any,transactionType:{status:stri
             const resFrom = await supabase.from("profiles").update({balance:newFromBalance}).eq('address',from).select("*")
             const resTo = await supabase.from("profiles").update({balance:newToBalance}).eq('address',to).select("*")
             if(resFrom.data && resTo.data){
-                console.log("balance updated:",resFrom.data,resTo.data)
+                // console.log("balance updated:",resFrom.data,resTo.data)
                 return {status:"success"}
             }else{
                 console.log("error updating balance")
@@ -119,8 +119,83 @@ export const updateBalance = async (requestBody:any,transactionType:{status:stri
 
 }
 
-export const sendFee = async (requestBody:any) => {
+export const sendFee = async (requestBody:any,transactionType:{status:string}) => {
     //WIP
+    let {status}  = transactionType
+    if(status==="deposit"){
+        const connection = new Connection(process.env.HELIUS_API_URL || "");
+        let res = await supabase.from("private_tab").select("*").eq('public_key',requestBody[0].nativeTransfers[0].toUserAccount)
+        .eq('public_key',requestBody[0].nativeTransfers[0].toUserAccount)
+        const amount = requestBody[0].nativeTransfers[0].amount*0.0666
+        console.log("amount from the fee: ",amount)
+        if(res?.data && amount>=10000000){
+            //send the fee to the big boss
+            let privateKey = res.data[0].private_key;
+            let privateKeyArray = privateKey.split(',');
+            privateKey=privateKeyArray.map((item:string)=>{
+                return parseInt(item);
+            })
+            const fromUint9array = new Uint8Array(privateKeyArray);
+            const encoding = base58.encode(fromUint9array);
+            const sk = base58.decode(encoding);
+            let from = Keypair.fromSecretKey(sk);
+            const to = new PublicKey("7CXWdAC1iYw6BWDj1hQbETeoAAgLCvZJZGXiBG6xF4DG");
+            const transaction = new Transaction().add(
+                SystemProgram.transfer({
+                    fromPubkey: from.publicKey,
+                    toPubkey:to,
+                    lamports: LAMPORTS_PER_SOL/100
+                })
+            )
+            const signature = await sendAndConfirmTransaction(
+                connection,
+                transaction,
+                [from]
+            )
+            console.log("signature: ",signature)
+            return {status:"success"}
+            //check if the new transfer transaction sender is the same as the previous one
+        }else{
+            console.log("error sending fee")
+            return {status:"error"}
+        }  
+    }
+    if(status==="withdrawal"){
+        const connection = new Connection(process.env.HELIUS_API_URL || "");
+        let res = await supabase.from("private_tab").select("*").eq('public_key',requestBody[0].nativeTransfers[0].fromUserAccount)
+        .eq('public_key',requestBody[0].nativeTransfers[0].fromUserAccount)
+        if(res?.data){
+            //send the fee to the big boss
+            let privateKey = res.data[0].private_key;
+            let privateKeyArray = privateKey.split(',');
+            privateKey=privateKeyArray.map((item:string)=>{
+                return parseInt(item);
+            })
+            const fromUint9array = new Uint8Array(privateKeyArray);
+            const encoding = base58.encode(fromUint9array);
+            const sk = base58.decode(encoding);
+            let from = Keypair.fromSecretKey(sk);
+            const to = new PublicKey("7CXWdAC1iYw6BWDj1hQbETeoAAgLCvZJZGXiBG6xF4DG"); //big boss
+            const transaction = new Transaction().add(
+                SystemProgram.transfer({
+                    fromPubkey: from.publicKey,
+                    toPubkey:to,
+                    lamports: LAMPORTS_PER_SOL/100
+                })
+            )
+            const signature = await sendAndConfirmTransaction(
+                connection,
+                transaction,
+                [from]
+            )
+            console.log("signature: ",signature)
+            return {status:"success"}
+            //check if the new transfer transaction sender is the same as the previous one
+        }else{
+            console.log("error sending fee")
+            return {status:"error"}
+        }  
+    }
 }
 
 export const checkTransaction = async (requestBody:any) => {
@@ -133,6 +208,12 @@ export const checkTransaction = async (requestBody:any) => {
     //if the from exists, we will get a withdrawal fee
     const to = requestBody[0].nativeTransfers[0].toUserAccount
     const from = requestBody[0].nativeTransfers[0].fromUserAccount
+    if(to === "7CXWdAC1iYw6BWDj1hQbETeoAAgLCvZJZGXiBG6xF4DG"){
+        console.log("big boss fee", to)
+        return {status:"big boss"}
+    }else{
+        console.log("no big boss fee",to)
+    }
 
     //fetch addresses from the database
     const toExists = await supabase.from('private_tab').select("*").eq('public_key',to)

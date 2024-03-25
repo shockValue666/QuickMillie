@@ -9,7 +9,7 @@ dotenv.config();
 import { createClient } from '@supabase/supabase-js';
 import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
 import base58 from 'bs58';
-import { checkTransaction, saveTransaction, updateBalance } from './helpers';
+import { checkTransaction, saveTransaction, sendFee, updateBalance } from './helpers';
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -101,51 +101,16 @@ app.post('/details', async (request: Request, response: Response) => {
     const amount = requestBody[0].nativeTransfers[0].amount/1000000000;
     if(request.body[0]){
         const transactionType = await checkTransaction(request.body);
+        const {status} = transactionType || {status:""};
+        if(status==="big boss"){
+            console.log("BIG BOSS FEE!!!")
+            return;
+        }
         const savedStatus = await saveTransaction(request.body);
         await updateBalance(request.body,transactionType || {status:""});
-    //     await sendFee(request.body);
+        await sendFee(request.body,transactionType || {status:""});
     }
     //print the json to the console
-    console.log("data received by the webhook: ", requestBody[0].signature);
-    const connection = new Connection(process.env.HELIUS_API_URL || "");
-    if(requestBody){
-        console.log("type: ",requestBody[0].type)
-        //if the type is "transfer", we will tranfer 6.66% to 7CXWdAC1iYw6BWDj1hQbETeoAAgLCvZJZGXiBG6xF4DG
-        if(requestBody[0].type === "TRANSFER"){
-            
-            
-            //let res = await supabase.from("private_tab").select("*").eq('public_key',requestBody[0].nativeTransfers[0].toUserAccount)
-            //.eq('public_key',requestBody[0].nativeTransfers[0].toUserAccount)
-            // if(res?.data){
-            //     //send the fee to the big boss
-            //     let privateKey = res.data[0].private_key;
-            //     let privateKeyArray = privateKey.split(',');
-            //     privateKey=privateKeyArray.map((item:string)=>{
-            //         return parseInt(item);
-            //     })
-            //     const fromUint9array = new Uint8Array(privateKeyArray);
-            //     const encoding = base58.encode(fromUint9array);
-            //     const sk = base58.decode(encoding);
-            //     let from = Keypair.fromSecretKey(sk);
-            //     const to = new PublicKey("7CXWdAC1iYw6BWDj1hQbETeoAAgLCvZJZGXiBG6xF4DG");
-            //     const transaction = new Transaction().add(
-            //         SystemProgram.transfer({
-            //             fromPubkey: from.publicKey,
-            //             toPubkey:to,
-            //             lamports: LAMPORTS_PER_SOL/100
-            //         })
-            //     )
-            //     const signature = await sendAndConfirmTransaction(
-            //         connection,
-            //         transaction,
-            //         [from]
-            //     )
-            //     console.log("signature: ",signature)
-            //     //check if the new transfer transaction sender is the same as the previous one
-            // }   
-        }
-        // console.log("accountdata: ",requestBody[0].nativeTransfers[0].toUserAccount)
-    }
 
     //send a response that we received and processed the request
     response.status(200).send('Webhook received the request funny (straight face)');

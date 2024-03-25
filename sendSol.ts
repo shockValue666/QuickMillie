@@ -14,11 +14,12 @@
         const from = Keypair.fromSecretKey(sk)
 
         // const to = new PublicKey("BYM7pC22vUBSVuFPpTdoaH8RqZqr7SH3F2fxYXQ4sbMS");
-        const to = new PublicKey("14Qxow2QyiNqSFpw5MK5DpS7f3nFdLktuwQSaSL5N2pa")
+        // const to = new PublicKey("14Qxow2QyiNqSFpw5MK5DpS7f3nFdLktuwQSaSL5N2pa")
+        const to = new PublicKey("3EKZ4JkM7VoubdBgivLRnaLP31Wrimijapi1VLEE1Dtv");
         
 
         const randomDivider = Math.floor(Math.random() * (1000 - 100 + 1)) + 100
-        const lamps = Math.floor(LAMPORTS_PER_SOL/randomDivider)
+        const lamps = Math.floor(LAMPORTS_PER_SOL/randomDivider)*100
         console.log("randomDivider: ",randomDivider)
         const transaction = new Transaction().add(
             SystemProgram.transfer({
